@@ -4,3 +4,4 @@ node_modules/
 .gitignore
 README.md
 docker-compose.yml
+nginx.conf

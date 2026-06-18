@@ -59,7 +59,7 @@ app.get('/secret', basicAuth, (_, res) => {
   res.send(SECRET_MESSAGE);
 });
 
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`  - Public route:    http://localhost:${PORT}/`);
   console.log(`  - Protected route: http://localhost:${PORT}/secret`);
