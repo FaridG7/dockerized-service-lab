@@ -69,3 +69,42 @@ curl http://localhost:3000/secret
 - `.env` is included here for convenience since this is a self-contained
   example, but in a real project you'd typically add it to `.gitignore` and
   share a `.env.example` instead so secrets never end up in version control.
+
+## Docker
+
+### Build and run with Docker Compose (recommended)
+
+```bash
+docker compose up --build
+```
+
+The service is reachable at `http://app:3000` from other containers on the
+same Docker network (e.g. your reverse proxy). It is **not** published to the
+host — `expose` makes it available only within the Docker network, which
+replaces the `127.0.0.1` binding used in the bare-metal setup.
+
+Env vars are loaded from your `.env` file via `env_file` in `docker-compose.yml`.
+
+### Build and run with plain Docker
+
+```bash
+# Build the image
+docker build -t secret-service .
+
+# Run — pass env vars explicitly and connect to your proxy's network
+docker run --rm \
+  --network your-proxy-network \
+  --env-file .env \
+  secret-service
+```
+
+### Connecting your reverse proxy
+
+Reference the app container by its service name (`app`) as the upstream.
+For nginx:
+
+```nginx
+location / {
+    proxy_pass http://app:3000;
+}
+```
