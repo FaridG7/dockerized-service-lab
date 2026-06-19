@@ -47,7 +47,7 @@ services:
     volumes:
       - registry-data:/var/lib/registry
     environment:
-      REGISTRY_STORAGE_DELETE_ENABLED: "true" # lets you prune old tags later
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
 
 volumes:
   gitlab_config:
