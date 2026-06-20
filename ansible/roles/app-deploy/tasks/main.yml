@@ -8,6 +8,8 @@
     name: myapp
     image: "{{ registry }}/{{ image_name }}:{{ image_tag }}"
     pull: true
+    comparisons:
+      image: strict          # <-- ADDED: force recreate when pulled digest differs, not just tag string
     state: started
     restart_policy: unless-stopped
     env:
@@ -24,6 +26,8 @@
     name: nginx_proxy
     image: "{{ registry }}/nginx:{{ image_tag }}"
     pull: true
+    comparisons:
+      image: strict          # <-- ADDED: same fix for the nginx container
     state: started
     restart_policy: unless-stopped
     ports:

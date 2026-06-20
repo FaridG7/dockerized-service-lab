@@ -1,12 +1,25 @@
 stages:
+  - test
   - build
   - deploy
 
 variables:
   REGISTRY: 192.168.122.1:5000
   IMAGE_NAME: myapp
-  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  IMAGE_TAG: latest
 
+# ---------- TEST ----------
+test-nginx:
+  stage: test
+  image: nginx:stable
+  script:
+    - nginx -t -c /dev/null -g "include /builds/$CI_PROJECT_PATH/nginx/nginx.conf;"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - nginx/**/*
+
+# ---------- BUILD ----------
 build-app:
   stage: build
   image: docker:24
@@ -16,20 +29,32 @@ build-app:
     - docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - app/**/*
 
 build-nginx:
   stage: build
   image: docker:24
+  needs:
+    - job: test-nginx
   script:
     - cd nginx
     - docker build -t $REGISTRY/nginx:$IMAGE_TAG .
     - docker push $REGISTRY/nginx:$IMAGE_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - nginx/**/*
 
+# ---------- DEPLOY ----------
 deploy:
   stage: deploy
   image: cytopia/ansible:latest-tools
+  needs:
+    - job: build-app
+      optional: true
+    - job: build-nginx
+      optional: true
   before_script:
     - mkdir -p ~/.ssh
     - echo "$ENCODED_SSH_PRIVATE_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_rsa
@@ -42,3 +67,8 @@ deploy:
       --extra-vars "app_secret_message=$SECRET_MESSAGE app_username=$USERNAME app_password=$PASSWORD"
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - app/**/*
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - nginx/**/*
