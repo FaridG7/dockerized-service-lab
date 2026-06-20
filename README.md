@@ -11,23 +11,23 @@ Terraform.
 
 ```
                           ┌───────────────  Your workstation (libvirt host) ───────────────┐
-                          │                                                              │
-   git push ─▶ ┌──────────────────────┐         ┌─────────────────┐                      │
-               │ GitLab CE (self-host)│ ──runs─▶│ GitLab Runner    │                      │
-               │  + Docker registry   │         │ (docker executor)│                      │
-               └──────────────────────┘         └────────┬─────────┘                      │
-                          │                              │ build & push                  │
-                          │              ┌───────────────▼──────────────┐                 │
-                          │              │ 192.168.122.1:5000 (registry)│                 │
-                          │              └───────────────┬──────────────┘                 │
-                          │                              │ pull                           │
-                          │              ┌───────────────▼──────────────┐                 │
+                          │                                                                │
+               ┌──────────────────────┐         ┌──────────────────┐                       │
+    git push ─▶│ GitLab CE (self-host)│ ──runs─▶│ GitLab Runner    │                       │
+               │  + Docker registry   │         │ (docker executor)│                       │
+               └──────────────────────┘         └────────┬─────────┘                       │
+                          │                              │ build & push                    │
+                          │              ┌───────────────▼──────────────┐                  │
+                          │              │ 192.168.122.1:5000 (registry)│                  │
+                          │              └───────────────┬──────────────┘                  │
+                          │                              │ pull                            │
+                          │              ┌───────────────▼───────────────┐                 │
                           │              │  VM (Terraform + libvirt/KVM) │                 │
                           │              │  Ansible → docker containers  │                 │
                           │              │   ├─ myapp (Node.js)          │                 │
                           │              │   └─ nginx_proxy (reverse px) │                 │
                           │              └───────────────────────────────┘                 │
-                          └──────────────────────────────────────────────────────────────────┘
+                          └────────────────────────────────────────────────────────────────┘
 ```
 
 ## Why this project exists
@@ -38,13 +38,13 @@ project on roadmap.sh, which calls for DigitalOcean + GitHub Actions. I don't
 have a public IP for GitHub Actions runners to reach, so I rebuilt the whole
 flow on infrastructure I already control:
 
-| Original task                  | This project's replacement                         |
-| ------------------------------ | -------------------------------------------------- |
+| Original task                  | This project's replacement                          |
+| ------------------------------ | --------------------------------------------------- |
 | DigitalOcean droplet           | Local **libvirt/KVM** VM provisioned with Terraform |
-| GitHub Actions (cloud runners) | Self-hosted **GitLab CE** + **GitLab Runner**      |
-| GitHub Container Registry      | Local **Docker registry** (`registry:3`)           |
+| GitHub Actions (cloud runners) | Self-hosted **GitLab CE** + **GitLab Runner**       |
+| GitHub Container Registry      | Local **Docker registry** (`registry:3`)            |
 
-The result is the same end-to-end story — *commit → test → build → deploy* —
+The result is the same end-to-end story — _commit → test → build → deploy_ —
 but with **zero per-run cloud cost** and the added learning value of standing up
 the CI server itself.
 
@@ -59,12 +59,12 @@ the CI server itself.
 `.gitlab-ci.yml` defines three stages, each gated by `changes:` rules so they
 only run when the relevant code changes:
 
-| Stage | Job          | Image                | What it does                                                            |
-| ----- | ------------ | -------------------- | ----------------------------------------------------------------------- |
-| test  | `test-nginx` | `nginx:stable`       | Validates `nginx/nginx.conf` syntax before building                     |
-| build | `build-app`  | `docker:24`          | Builds `app/` → `myapp:latest`, pushes to the local registry            |
-| build | `build-nginx`| `docker:24`          | Builds `nginx/` → `nginx:latest`, pushes to the local registry          |
-| deploy| `deploy`     | `cytopia/ansible`    | SSHes into the VM and runs the Ansible playbook to pull & run containers |
+| Stage  | Job           | Image             | What it does                                                             |
+| ------ | ------------- | ----------------- | ------------------------------------------------------------------------ |
+| test   | `test-nginx`  | `nginx:stable`    | Validates `nginx/nginx.conf` syntax before building                      |
+| build  | `build-app`   | `docker:24`       | Builds `app/` → `myapp:latest`, pushes to the local registry             |
+| build  | `build-nginx` | `docker:24`       | Builds `nginx/` → `nginx:latest`, pushes to the local registry           |
+| deploy | `deploy`      | `cytopia/ansible` | SSHes into the VM and runs the Ansible playbook to pull & run containers |
 
 The runner uses the Docker executor, mounting the host's Docker socket so it can
 build images that land directly in the local registry. The deploy job injects
@@ -72,6 +72,7 @@ the VM's SSH private key (base64-encoded, stored as a masked CI variable) and
 runs `ansible-playbook` against the Terraform-provisioned VM.
 
 The Ansible playbook (`ansible/site.yml`) runs three roles in order:
+
 1. **`base`** — `apt dist-upgrade` on the VM.
 2. **`docker-setup`** — installs Docker, declares the local registry as
    insecure in `/etc/docker/daemon.json`, adds the deploy user to the `docker`
@@ -156,11 +157,11 @@ create the project, push this repo to it, and register the runner using the
 
 In **GitLab → Settings → CI/CD → Variables**, add:
 
-| Variable                | Value                                                                 |
-| ----------------------- | --------------------------------------------------------------------- |
+| Variable                  | Value                                                                   |
+| ------------------------- | ----------------------------------------------------------------------- |
 | `ENCODED_SSH_PRIVATE_KEY` | Your VM private key (`id_rsa`), **base64-encoded**: `base64 -w0 id_rsa` |
-| `SECRET_MESSAGE`        | The message returned by the app's `/secret` route                     |
-| `USERNAME` / `PASSWORD` | Basic-Auth credentials for `/secret`                                  |
+| `SECRET_MESSAGE`          | The message returned by the app's `/secret` route                       |
+| `USERNAME` / `PASSWORD`   | Basic-Auth credentials for `/secret`                                    |
 
 > `ENCODED_SSH_PRIVATE_KEY` is masked; the app secrets are passed with
 > `--extra-vars` and the deploy task uses `no_log: true` so they don't leak in
@@ -190,7 +191,7 @@ curl -u admin:<PASSWORD> http://myapp.local/secret   # -> <SECRET_MESSAGE>
 ```
 
 The app is reachable on the host because nginx publishes port `80`; the app
-container stays internal to the Docker network and is only reachable *through*
+container stays internal to the Docker network and is only reachable _through_
 the reverse proxy.
 
 ---
@@ -238,7 +239,7 @@ The downloaded Ubuntu cloud image under `terraform/iso/` and the libvirt
 - **Pipeline can't push/pull from the registry (`http://server gave HTTP response to HTTPS`).** The local registry is plain HTTP. The deploy VM is told to
   trust it via the `insecure-registries` entry Ansible writes — if you skipped
   the `docker-setup` role or changed the registry address, that's the culprit.
-  The Docker *daemon* running the runner's builds may also need the same entry
+  The Docker _daemon_ running the runner's builds may also need the same entry
   on the host running GitLab.
 - **Deploy job fails on SSH (`Host key verification failed`).** The job does an
   `ssh-keyscan` of the VM into `known_hosts`. If the VM was recreated (new host
