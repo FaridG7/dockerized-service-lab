@@ -7,13 +7,23 @@ variables:
   IMAGE_NAME: myapp
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA
 
-build:
+build-app:
   stage: build
   image: docker:24
   script:
     - cd app
     - docker build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
     - docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+build-nginx:
+  stage: build
+  image: docker:24
+  script:
+    - cd nginx
+    - docker build -t $REGISTRY/nginx:$IMAGE_TAG .
+    - docker push $REGISTRY/nginx:$IMAGE_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
 

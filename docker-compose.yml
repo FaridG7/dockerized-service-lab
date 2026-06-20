@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: ./app/
     expose:
       - "3000"
     env_file:
@@ -10,11 +10,9 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:alpine
+    build: ./nginx/
     ports:
       - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app
     networks:
