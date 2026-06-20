@@ -1,4 +1,5 @@
 - name: Upgrade all packages (Debian)
+  become: true
   ansible.builtin.apt:
     update_cache: true
     upgrade: dist

@@ -1,0 +1,32 @@
+- name: Ensure shared Docker network exists
+  community.docker.docker_network:
+    name: "{{ docker_network_name }}"
+    state: present
+
+- name: Pull and run the application container
+  community.docker.docker_container:
+    name: myapp
+    image: "{{ registry }}/{{ image_name }}:{{ image_tag }}"
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    env:
+      PORT: "80"
+      SECRET_MESSAGE: "{{ app_secret_message }}"
+      USERNAME: "{{ app_username }}"
+      PASSWORD: "{{ app_password }}"
+    networks:
+      - name: "{{ docker_network_name }}"
+  no_log: true
+
+- name: Pull and run the Nginx reverse proxy container
+  community.docker.docker_container:
+    name: nginx_proxy
+    image: "{{ registry }}/nginx:{{ image_tag }}"
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - name: "{{ docker_network_name }}"

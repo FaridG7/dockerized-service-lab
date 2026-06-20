@@ -1,11 +1,14 @@
 - name: Update all the systems
   hosts: webservers
-  become: true
   roles:
     - base
 
 - name: Install and configure dependencies
   hosts: webservers
-  become: true
   roles:
     - docker-setup
+
+- name: Deploy the app
+  hosts: webservers
+  roles:
+    - app-deploy
