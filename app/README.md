@@ -1,34 +1,51 @@
-# secret-service
+# App — the deployed service
 
-A tiny Node.js + Express service with two routes:
+The service this pipeline builds and ships: a tiny Node.js + Express app with
+two routes.
+
+> Part of the [dockerized-service-lab](../README.md) project. The CI pipeline
+> builds this directory into the `myapp` image; Ansible then runs it behind the
+> [`nginx`](../nginx/README.md) reverse proxy on the
+> [Terraform-provisioned VM](../terraform/README.md).
+
+## Routes
 
 - `GET /` — returns `Hello, world!`
 - `GET /secret` — protected by HTTP Basic Auth; returns a secret message on success
 
 ## Setup
 
-1. Install dependencies:
+**1. Install dependencies**
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-2. Configure environment variables in `.env` (a default file is included — edit the values):
+**2. Provide the required environment variables**
 
-   ```env
-   PORT=3000
-   SECRET_MESSAGE=You found the secret stash of cookies!
-   USERNAME=admin
-   PASSWORD=supersecret
-   ```
+The app validates on startup that `SECRET_MESSAGE`, `USERNAME`, and `PASSWORD`
+are all set, and exits with an error if any are missing — so a misconfigured
+environment can't accidentally leave `/secret` open or broken.
 
-3. Start the server:
+```env
+PORT=3000
+SECRET_MESSAGE=You found the secret stash of cookies!
+USERNAME=admin
+PASSWORD=supersecret
+```
 
-   ```bash
-   npm start
-   ```
+> Note: the app reads these straight from `process.env` (there's no `dotenv`
+> dependency). The `.env` file is consumed by **Docker** — via `env_file` in the
+> root [`docker-compose.yml`](../docker-compose.yml) and the `env` dict in the
+> [Ansible deploy role](../ansible/roles/app-deploy/tasks/main.yml). To run the
+> app directly with node, export the variables in your shell first:
 
-   The server logs the URLs it's listening on, e.g. `http://localhost:3000`.
+```bash
+export PORT=3000 SECRET_MESSAGE="..." USERNAME=admin PASSWORD=supersecret
+npm run dev
+```
+
+The server logs the URLs it's listening on, e.g. `http://localhost:3000`.
 
 ## Usage
 
@@ -42,8 +59,8 @@ curl http://localhost:3000/
 ### Protected route
 
 Visiting `/secret` in a browser triggers a native username/password prompt
-(via the `WWW-Authenticate: Basic` header). Enter the `USERNAME` and
-`PASSWORD` from your `.env` file.
+(via the `WWW-Authenticate: Basic` header). Enter the `USERNAME` and `PASSWORD`
+from your environment.
 
 From the command line:
 
@@ -60,51 +77,48 @@ curl http://localhost:3000/secret
 
 ## Notes
 
-- The server validates that `SECRET_MESSAGE`, `USERNAME`, and `PASSWORD`
-  are all set on startup and exits with an error if any are missing, so a
-  misconfigured `.env` can't accidentally leave the route open or broken.
-- Basic Auth sends credentials base64-encoded, not encrypted — this is fine
-  for local development or behind an HTTPS-terminating proxy, but don't rely
-  on it alone over plain HTTP in production.
-- `.env` is included here for convenience since this is a self-contained
-  example, but in a real project you'd typically add it to `.gitignore` and
-  share a `.env.example` instead so secrets never end up in version control.
+- Basic Auth sends credentials base64-encoded, **not encrypted** — fine for
+  local development or behind an HTTPS-terminating proxy, but don't rely on it
+  alone over plain HTTP in production.
+- In the deployed setup the app is **not** published to the host — it only
+  listens on the internal Docker network and is reachable solely through the
+  nginx reverse proxy (`proxy_pass http://myapp`).
 
 ## Docker
 
 ### Build and run with Docker Compose (recommended)
 
+From the **repository root** (the compose file lives there, not in `app/`):
+
 ```bash
+cp .env.example .env      # set PORT / SECRET_MESSAGE / USERNAME / PASSWORD
 docker compose up --build
 ```
 
-The service is reachable at `http://app:3000` from other containers on the
-same Docker network (e.g. your reverse proxy). It is **not** published to the
-host — `expose` makes it available only within the Docker network, which
-replaces the `127.0.0.1` binding used in the bare-metal setup.
-
-Env vars are loaded from your `.env` file via `env_file` in `docker-compose.yml`.
+This brings up both `app` and `nginx`. The app is reachable at `http://app:3000`
+from other containers on the same Docker network. Env vars are loaded from your
+`.env` via `env_file` in `docker-compose.yml`.
 
 ### Build and run with plain Docker
 
 ```bash
 # Build the image
-docker build -t secret-service .
+docker build -t myapp .
 
 # Run — pass env vars explicitly and connect to your proxy's network
 docker run --rm \
   --network your-proxy-network \
   --env-file .env \
-  secret-service
+  myapp
 ```
 
 ### Connecting your reverse proxy
 
-Reference the app container by its service name (`app`) as the upstream.
-For nginx:
+Reference the app container by its service name (`app` locally, `myapp` in the
+deployed setup) as the upstream. For nginx:
 
 ```nginx
 location / {
-    proxy_pass http://app:3000;
+    proxy_pass http://myapp;
 }
 ```

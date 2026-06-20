@@ -2,11 +2,11 @@
 
 Provisions the Ubuntu 24.04 VM that the rest of the pipeline deploys to. Uses the community [`dmacvicar/libvirt`](https://registry.terraform.io/providers/dmacvicar/libvirt) provider to manage the VM, its disks, and a cloud-init disk on the local libvirt daemon — no cloud account required.
 
-> Part of the [gitlab-cicd-lab](../README.md) project. This is the **first** stage of the pipeline: it creates the target server that GitLab CI later deploys to.
+> Part of the [dockerized-service-lab](../README.md) project. This is the **first** stage of the pipeline: it creates the target server that GitLab CI later deploys to.
 
 ---
 
-## What It Creates
+## What it creates
 
 | Resource                       | Purpose                                                          |
 | ------------------------------ | ---------------------------------------------------------------- |

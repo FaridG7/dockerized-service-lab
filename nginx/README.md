@@ -1,3 +1,34 @@
+# Nginx — reverse proxy
+
+The reverse proxy that fronts the [app](../app/README.md) in the deployed
+setup. Ansible runs this image as the `nginx_proxy` container, publishing port
+`80` and proxying to the `myapp` container over the shared Docker network.
+
+> Part of the [dockerized-service-lab](../README.md) project.
+
+The base config in this directory is a vendored copy of
+[h5bp/server-configs-nginx](https://github.com/h5bp/server-configs-nginx) — a
+battle-tested collection of nginx snippets for performance and security
+(compression, cache headers, HSTS/CSP/etc.). On top of it we add our own
+virtual host for the app.
+
+The CI pipeline lints `nginx.conf` in the `test-nginx` job *before* building the
+image (see [`../.gitlab-ci.yml`](../.gitlab-ci.yml)).
+
+## Our additions on top of h5bp
+
+- **`conf.d/myapp.local.conf`** — the vhost for the deployed app: listens on
+  `:80` for `myapp.local`, redirects `www.myapp.local` → `myapp.local`, and
+  `proxy_pass`es to the `myapp` upstream. Unknown hosts are dropped by
+  `no-ssl.default.conf` (returns `444`).
+- **`Dockerfile`** — a one-line build (`FROM nginx:alpine`) that copies
+  `conf.d/`, `h5bp/`, `nginx.conf`, and `mime.types` into the image.
+
+The rest of this README is the original h5bp documentation, kept for reference
+on how the `conf.d/` and `h5bp/` directories are structured.
+
+---
+
 # [Nginx Server Configs](https://github.com/h5bp/server-configs-nginx)
 
 [![Server CI](https://github.com/h5bp/server-configs-nginx/actions/workflows/server.yml/badge.svg)](https://github.com/h5bp/server-configs-nginx/actions/workflows/server.yml)
