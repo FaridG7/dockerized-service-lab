@@ -1,5 +1,0 @@
-- name: Update all the systems
-  hosts: all
-  become: true
-  roles:
-    - base

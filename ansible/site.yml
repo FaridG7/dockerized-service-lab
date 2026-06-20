@@ -1,0 +1,11 @@
+- name: Update all the systems
+  hosts: webservers
+  become: true
+  roles:
+    - base
+
+- name: Install and configure dependencies
+  hosts: webservers
+  become: true
+  roles:
+    - docker-setup
