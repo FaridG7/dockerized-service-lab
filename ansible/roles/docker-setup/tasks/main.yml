@@ -11,6 +11,15 @@
         name: docker.io
         state: present
 
+    - name: Configure insecure registry
+      ansible.builtin.copy:
+        content: |
+          {
+            "insecure-registries": ["{{ registry }}"]
+          }
+        dest: /etc/docker/daemon.json
+        mode: "0644"
+
     - name: Ensure Docker service is running and enabled
       ansible.builtin.service:
         name: docker
